@@ -35,7 +35,8 @@ class Calculator:
         self.records = []
 
     def add_record(self, record: Record) -> list:
-        """Метод, добавляющий новые записи для ккал/денег."""
+        """Метод, добавляющий новые записи для
+        калькуляторов ккал/денег."""
         self.records.append(record)
 
     def get_today_stats(self) -> float:
@@ -49,10 +50,16 @@ class Calculator:
     def get_week_stats(self) -> float:
         """Метод для вывода данных о ккал/деньгах за неделю."""
         week_stats = 0
-        week_ago = dt.datetime.now().date() - dt.timedelta(weeks=1)
+        today = dt.datetime.now().date()
+        week_ago = today - dt.timedelta(weeks=1)
         week_stats = sum(r.amount for r in self.records
-                         if dt.datetime.now().date() >= r.date > week_ago)
+                         if today >= r.date > week_ago)
         return week_stats
+
+    def get_remained_balance(self):
+        """Метод для получения остатка калорий
+        или денег."""
+        return self.limit - self.get_today_stats()
 
 
 class CaloriesCalculator(Calculator):
@@ -60,10 +67,11 @@ class CaloriesCalculator(Calculator):
     def get_calories_remained(self) -> str:
         """Метод, вычисляющий остаток калорий,
         доступных для употребления."""
-        remainded = self.limit - super().get_today_stats()
-        if super().get_today_stats() < self.limit:
-            return (f"Сегодня можно съесть что-нибудь ещё, "
-                    f"но с общей калорийностью не более {remainded} кКал")
+        remained_balance = self.get_remained_balance()
+        if remained_balance > 0:
+            return ("Сегодня можно съесть что-нибудь ещё, "
+                    "но с общей калорийностью не более "
+                    f"{remained_balance} кКал")
         return "Хватит есть!"
 
 
@@ -74,8 +82,8 @@ class CashCalculator(Calculator):
     RUB_RATE: float = 1.00
 
     def get_today_cash_remained(self, currency) -> str:
-        """Метод, вычисляющий остато денежных средств,
-        доступных для траты, в заданной валюте."""
+        """Метод, вычисляющий остаток денежных средств,
+        доступных для трат, в заданной валюте."""
         RATES = {
             "usd": (self.USD_RATE, "USD"),
             "eur": (self.EURO_RATE, "Euro"),
@@ -86,12 +94,13 @@ class CashCalculator(Calculator):
             return "Неизвестная валюта"
 
         rate, currency_name = RATES[currency]
-        today_stats = super().get_today_stats()
-        cash_remained = round((self.limit - today_stats) / rate, 2)
+        remained_balance = self.get_remained_balance()
+        cash_remained = round(remained_balance / rate, 2)
 
         if cash_remained > 0:
-            return (f"На сегодня осталось {cash_remained} {currency_name}")
+            return ("На сегодня осталось "
+                    f"{cash_remained} {currency_name}")
         elif cash_remained == 0:
-            return ("Денег нет, держись")
-        return (f"Денег нет, держись: твой долг - "
+            return "Денег нет, держись"
+        return ("Денег нет, держись: твой долг - "
                 f"{abs(cash_remained)} {currency_name}")
